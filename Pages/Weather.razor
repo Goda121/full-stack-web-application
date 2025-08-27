@@ -1,0 +1,65 @@
+@page "/weather"
+@using Client.Models
+@using Client.Services
+@inject WeatherForecastService ForecastService
+
+<PageTitle>Weather Forecast</PageTitle>
+
+<h1>Weather Forecast</h1>
+
+<p>This component demonstrates fetching data from the Web API.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (forecasts.Length == 0)
+{
+    <div class="alert alert-warning">
+        <p><strong>No data received from API.</strong></p>
+        <p>Please check that the API server is running at http://localhost:5002</p>
+        <button class="btn btn-primary" @onclick="RefreshData">Try Again</button>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th aria-label="Temperature in Celsius">Temp. (C)</th>
+                    <th aria-label="Temperature in Farenheit">Temp. (F)</th>
+                    <th>Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var forecast in forecasts)
+                {
+                    <tr>
+                        <td>@forecast.Date.ToShortDateString()</td>
+                        <td>@forecast.TemperatureC</td>
+                        <td>@forecast.TemperatureF</td>
+                        <td>@forecast.Summary</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    
+    <button class="btn btn-primary" @onclick="RefreshData">Refresh Data</button>
+}
+
+@code {
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        forecasts = await ForecastService.GetForecastAsync();
+    }
+}

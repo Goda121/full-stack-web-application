@@ -1,0 +1,227 @@
+@page "/userprojects"
+@using Client.Models
+@using Client.Services
+@inject UserProjectService ProjectService
+@inject NavigationManager NavigationManager
+
+<h3>User Projects Management</h3>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Add New Project</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@newProject" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group mb-3">
+                        <label for="email">Email:</label>
+                        <InputText id="email" @bind-Value="newProject.Email" class="form-control" />
+                        <ValidationMessage For="@(() => newProject.Email)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="password">Password:</label>
+                        <InputText id="password" @bind-Value="newProject.Password" type="password" class="form-control" />
+                        <ValidationMessage For="@(() => newProject.Password)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="age">Age:</label>
+                        <InputNumber id="age" @bind-Value="newProject.Age" class="form-control" />
+                        <ValidationMessage For="@(() => newProject.Age)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="projectName">Project Name:</label>
+                        <InputText id="projectName" @bind-Value="newProject.ProjectName" class="form-control" />
+                        <ValidationMessage For="@(() => newProject.ProjectName)" />
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <InputCheckbox id="isCompleted" @bind-Value="newProject.IsCompleted" class="form-check-input" />
+                        <label class="form-check-label" for="isCompleted">
+                            Project Completed
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Project</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Projects List</h5>
+            </div>
+            <div class="card-body">
+                @if (projects == null)
+                {
+                    <p><em>Loading...</em></p>
+                }
+                else if (!projects.Any())
+                {
+                    <p>No projects found. Add your first project!</p>
+                }
+                else
+                {
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Age</th>
+                                <th>Project Name</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var project in projects)
+                            {
+                                <tr>
+                                    <td>@project.Email</td>
+                                    <td>@project.Age</td>
+                                    <td>@project.ProjectName</td>
+                                    <td>
+                                        @if (project.IsCompleted)
+                                        {
+                                            <span class="badge bg-success">Completed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">In Progress</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" @onclick="() => EditProject(project)">Edit</button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteProject(project.Id)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (editingProject != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Project</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@editingProject" OnValidSubmit="HandleEditSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group mb-3">
+                            <label for="editEmail">Email:</label>
+                            <InputText id="editEmail" @bind-Value="editingProject.Email" class="form-control" />
+                            <ValidationMessage For="@(() => editingProject.Email)" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="editPassword">Password:</label>
+                            <InputText id="editPassword" @bind-Value="editingProject.Password" type="password" class="form-control" />
+                            <ValidationMessage For="@(() => editingProject.Password)" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="editAge">Age:</label>
+                            <InputNumber id="editAge" @bind-Value="editingProject.Age" class="form-control" />
+                            <ValidationMessage For="@(() => editingProject.Age)" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="editProjectName">Project Name:</label>
+                            <InputText id="editProjectName" @bind-Value="editingProject.ProjectName" class="form-control" />
+                            <ValidationMessage For="@(() => editingProject.ProjectName)" />
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <InputCheckbox id="editIsCompleted" @bind-Value="editingProject.IsCompleted" class="form-check-input" />
+                            <label class="form-check-label" for="editIsCompleted">
+                                Project Completed
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Update Project</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<UserProject> projects = new();
+    private UserProject newProject = new() { Age = 18 };
+    private UserProject? editingProject;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        projects = await ProjectService.GetProjectsAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (await ProjectService.AddProjectAsync(newProject))
+        {
+            await LoadProjects();
+            newProject = new() { Age = 18 };
+        }
+    }
+
+    private void EditProject(UserProject project)
+    {
+        editingProject = new UserProject
+        {
+            Id = project.Id,
+            Email = project.Email,
+            Password = project.Password,
+            Age = project.Age,
+            ProjectName = project.ProjectName,
+            IsCompleted = project.IsCompleted
+        };
+    }
+
+    private async Task HandleEditSubmit()
+    {
+        if (editingProject != null && await ProjectService.UpdateProjectAsync(editingProject))
+        {
+            await LoadProjects();
+            CloseModal();
+        }
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        if (await ProjectService.DeleteProjectAsync(id))
+        {
+            await LoadProjects();
+        }
+    }
+
+    private void CloseModal()
+    {
+        editingProject = null;
+    }
+}
